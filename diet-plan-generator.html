@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diet Plan Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f4f4f4;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            box-sizing: border-box;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #218838;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background: #eef;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Diet Plan Generator</h2>
+    <label>Age</label>
+    <input type="number" id="age" placeholder="Enter age">
+    <label>Height (cm)</label>
+    <input type="number" id="height" placeholder="Enter height">
+    <label>Weight (kg)</label>
+    <input type="number" id="weight" placeholder="Enter weight">
+    <button onclick="generatePlan()">Generate Diet Plan</button>
+    <div id="result"></div>
+</div>
+<script>
+function generatePlan() {
+    let age = parseFloat(document.getElementById("age").value);
+    let height = parseFloat(document.getElementById("height").value);
+    let weight = parseFloat(document.getElementById("weight").value);
+    if (!age || !height || !weight || age <= 0 || height <= 0 || weight <= 0) {
+        alert("Please fill all fields with valid positive numbers.");
+        return;
+    }
+    let bmi = weight / ((height / 100) ** 2);
+    let category = "";
+    let plan = "";
+    if (bmi < 18.5) {
+        category = "Underweight";
+        plan = `
+            <ul>
+                <li>Breakfast: Milk, oats, banana, nuts</li>
+                <li>Lunch: Rice, dal, vegetables, paneer/chicken</li>
+                <li>Snacks: Peanut butter sandwich, fruits</li>
+                <li>Dinner: Roti, vegetables, protein source</li>
+            </ul>`;
+    } else if (bmi < 25) {
+        category = "Normal Weight";
+        plan = `
+            <ul>
+                <li>Breakfast: Eggs/sprouts, toast, fruit</li>
+                <li>Lunch: Roti, dal, vegetables, salad</li>
+                <li>Snacks: Nuts and fruits</li>
+                <li>Dinner: Light meal with vegetables and protein</li>
+            </ul>`;
+    } else {
+        category = "Overweight";
+        plan = `
+            <ul>
+                <li>Breakfast: Oats, fruits, green tea</li>
+                <li>Lunch: Salad, dal, vegetables, grilled protein</li>
+                <li>Snacks: Fruits, roasted chana</li>
+                <li>Dinner: Soup, vegetables, lean protein</li>
+            </ul>`;
+    }
+    document.getElementById("result").innerHTML = `
+        <h3>Result</h3>
+        <p><strong>BMI:</strong> ${bmi.toFixed(2)}</p>
+        <p><strong>Category:</strong> ${category}</p>
+        <h4>Suggested Diet Plan</h4>
+        ${plan}
+    `;
+}
+</script>
+</body>
+</html>
