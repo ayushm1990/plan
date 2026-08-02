@@ -17,17 +17,19 @@
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        input, button {
+        input, select, button {
             width: 100%;
             padding: 10px;
             margin: 8px 0;
             box-sizing: border-box;
+            font-size: 14px;
         }
         button {
             background: #28a745;
             color: white;
             border: none;
             cursor: pointer;
+            font-weight: bold;
         }
         button:hover {
             background: #218838;
@@ -37,6 +39,41 @@
             padding: 10px;
             background: #eef;
             border-radius: 5px;
+        }
+        #result p {
+            margin: 6px 0;
+        }
+        #result ul {
+            margin: 6px 0;
+            padding-left: 20px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #dfefff;
+            font-size: 13px;
+            margin-left: 6px;
+        }
+        .health-box {
+            margin-top: 12px;
+            padding: 10px;
+            background: #fff4e5;
+            border-left: 4px solid #ffa940;
+            border-radius: 4px;
+        }
+        .health-box h4 {
+            margin: 0 0 6px 0;
+        }
+        .swap-cols {
+            display: flex;
+            gap: 10px;
+        }
+        .swap-cols div {
+            flex: 1;
+        }
+        .swap-cols ul {
+            font-size: 13px;
         }
     </style>
 </head>
@@ -49,55 +86,221 @@
     <input type="number" id="height" placeholder="Enter height">
     <label>Weight (kg)</label>
     <input type="number" id="weight" placeholder="Enter weight">
+    <label>Gender</label>
+    <select id="gender">
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+    </select>
+    <label>Activity Level</label>
+    <select id="activity">
+        <option value="sedentary">Sedentary (little/no exercise)</option>
+        <option value="light">Lightly active (1-3 days/week)</option>
+        <option value="moderate">Moderately active (3-5 days/week)</option>
+        <option value="active">Very active (6-7 days/week)</option>
+    </select>
+    <label>Diet Preference</label>
+    <select id="dietPref">
+        <option value="veg">Vegetarian</option>
+        <option value="nonveg">Non-Vegetarian</option>
+    </select>
+    <label>Health Condition</label>
+    <select id="disease">
+        <option value="none">None</option>
+        <option value="diabetes">Diabetes</option>
+        <option value="hypertension">Hypertension (High BP)</option>
+        <option value="heart">Heart Disease</option>
+        <option value="thyroid">Thyroid (Hypothyroidism)</option>
+        <option value="pcos">PCOS/PCOD</option>
+    </select>
     <button onclick="generatePlan()">Generate Diet Plan</button>
     <div id="result"></div>
 </div>
 <script>
+// ---------- Age & BMI classification ----------
+function getAgeGroup(age) {
+    if (age < 13) return "Child";
+    if (age < 20) return "Teen";
+    if (age < 60) return "Adult";
+    return "Senior";
+}
+
+function getBmiCategory(bmi) {
+    if (bmi < 18.5) return "Underweight";
+    if (bmi < 25) return "Normal Weight";
+    if (bmi < 30) return "Overweight";
+    return "Obese";
+}
+
+// ---------- Base meal plans (non-veg friendly wording; converted to veg via swap map) ----------
+const dietPlans = {
+    Child: {
+        Underweight: ["Whole milk, banana, oats with ghee", "Rice, dal, paneer, mashed vegetables", "Cheese cubes, nuts (age-appropriate), fruit", "Khichdi with vegetables and curd"],
+        "Normal Weight": ["Milk, boiled egg, fruit", "Roti, dal, vegetables, curd", "Fruit slices, a handful of nuts", "Rice, vegetables, light protein"],
+        Overweight: ["Milk (low sugar), oats, fruit", "Roti, dal, salad, vegetables (limit fried food)", "Fruit, roasted chana", "Vegetable soup, small portion of rice/roti"],
+        Obese: ["Milk (unsweetened), oats, fruit", "Small portions roti, dal, plenty vegetables", "Fruit, cucumber sticks", "Vegetable soup, salad, small protein portion"]
+    },
+    Teen: {
+        Underweight: ["Milk, oats, banana, nuts, peanut butter toast", "Rice, dal, chicken/paneer, vegetables", "Protein shake or sandwich, fruits", "Roti, vegetables, protein source, curd"],
+        "Normal Weight": ["Eggs/sprouts, whole grain toast, fruit", "Roti, dal, vegetables, salad, curd", "Nuts, fruit, or yogurt", "Light meal with vegetables and protein"],
+        Overweight: ["Oats, fruit, green tea/milk", "Salad, dal, vegetables, grilled protein, limited rice", "Fruits, roasted chana, sprouts", "Soup, vegetables, lean protein, limited carbs"],
+        Obese: ["Oats or sprouts, fruit, no added sugar", "Salad, dal, steamed vegetables, small grilled protein", "Fruit, cucumber/carrot sticks", "Clear soup, vegetables, lean protein, minimal carbs"]
+    },
+    Adult: {
+        Underweight: ["Milk, oats, banana, nuts", "Rice, dal, vegetables, paneer/chicken", "Peanut butter sandwich, fruits", "Roti, vegetables, protein source"],
+        "Normal Weight": ["Eggs/sprouts, toast, fruit", "Roti, dal, vegetables, salad", "Nuts and fruits", "Light meal with vegetables and protein"],
+        Overweight: ["Oats, fruits, green tea", "Salad, dal, vegetables, grilled protein", "Fruits, roasted chana", "Soup, vegetables, lean protein"],
+        Obese: ["Oats/egg whites, fruit, green tea (no sugar)", "Salad, dal, steamed vegetables, grilled protein, no rice", "Roasted chana, cucumber sticks", "Clear soup, vegetables, lean protein only"]
+    },
+    Senior: {
+        Underweight: ["Milk, soft oats, banana, soaked nuts", "Soft rice, dal, well-cooked vegetables, paneer", "Fruit, boiled egg, buttermilk", "Khichdi, soft vegetables, protein source"],
+        "Normal Weight": ["Milk, idli/poha, fruit", "Roti, dal, soft-cooked vegetables, curd", "Fruit, soaked nuts", "Light meal: soup, vegetables, mild protein"],
+        Overweight: ["Oats, fruit, herbal tea", "Dal, steamed vegetables, small portion grains, salad", "Fruit, roasted makhana", "Soup, vegetables, light protein, minimal salt/oil"],
+        Obese: ["Oats or sprouts, fruit, herbal tea", "Dal, steamed vegetables, very small portion grains", "Roasted makhana, fruit", "Clear soup, vegetables, light protein, low salt"]
+    }
+};
+
+const generalTips = {
+    Child: "Focus on balanced growth nutrition; avoid strict dieting for children — consult a pediatrician for personalized guidance.",
+    Teen: "Growing bodies need adequate calories and protein; avoid crash diets during teenage years.",
+    Adult: "Maintain a balanced mix of protein, fiber, and healthy fats; adjust portions based on activity level.",
+    Senior: "Prioritize easily digestible foods, adequate calcium/protein, and hydration; consult a doctor for chronic conditions."
+};
+
+// ---------- Vegetarian conversion ----------
+// Ordered so longer/more specific phrases are replaced before shorter ones.
+const vegSwaps = [
+    ["chicken/paneer", "paneer/tofu/soya chunks"],
+    ["paneer/chicken", "paneer/tofu"],
+    ["grilled protein", "grilled paneer/tofu/soya chunks"],
+    ["lean protein only", "paneer/tofu/legumes"],
+    ["lean protein", "paneer/tofu/legumes"],
+    ["mild protein", "paneer/moong dal"],
+    ["protein source", "paneer/tofu/legumes"],
+    ["boiled egg", "soaked almonds/sprouts"],
+    ["egg whites", "sprouts/paneer"],
+    ["Eggs/sprouts", "Sprouts/moong dal chilla"],
+    ["chicken", "soya chunks/tofu"],
+    ["egg", "sprouts"]
+];
+
+function applyDietPreference(text, pref) {
+    if (pref !== "veg") return text;
+    let result = text;
+    for (const [from, to] of vegSwaps) {
+        result = result.split(from).join(to);
+    }
+    return result;
+}
+
+// ---------- Disease-specific guidance ----------
+const diseaseInfo = {
+    none: null,
+    diabetes: {
+        label: "Diabetes",
+        avoid: ["Sugary drinks & sweets", "White rice/refined flour in excess", "Fried & processed snacks"],
+        include: ["High-fiber whole grains (millets, brown rice)", "Leafy greens & non-starchy vegetables", "Protein with every meal to slow sugar spikes"],
+        note: "Favor smaller, more frequent meals and pair carbs with protein/fiber to reduce blood sugar spikes. Monitor portion sizes of rice, roti, and fruit."
+    },
+    hypertension: {
+        label: "Hypertension (High BP)",
+        avoid: ["Excess salt & pickles", "Processed/packaged foods", "Fried snacks and red meat"],
+        include: ["Potassium-rich foods (banana, spinach, sweet potato)", "Low-fat dairy", "Garlic, and fresh herbs instead of salt for flavor"],
+        note: "Limit sodium intake and avoid adding extra salt to meals. Choose fresh, home-cooked food over packaged/processed items."
+    },
+    heart: {
+        label: "Heart Disease",
+        avoid: ["Deep-fried foods & trans fats", "Excess red meat/organ meats", "High-cholesterol processed foods"],
+        include: ["Healthy fats (nuts, olive oil in moderation)", "Oats & whole grains for fiber", "Fatty fish or flaxseed for omega-3 (or flax/walnuts if vegetarian)"],
+        note: "Keep saturated fat and cholesterol intake low; prioritize steaming, grilling, or boiling over frying."
+    },
+    thyroid: {
+        label: "Thyroid (Hypothyroidism)",
+        avoid: ["Excess raw cruciferous vegetables (cabbage, broccoli) — cooking reduces impact", "Excess soy in isolation from meals", "Skipping meals/irregular eating"],
+        include: ["Iodine-rich foods (iodized salt, dairy)", "Selenium-rich foods (nuts, seeds)", "Adequate protein at each meal"],
+        note: "Take any thyroid medication as prescribed, ideally on an empty stomach, and maintain regular meal timings."
+    },
+    pcos: {
+        label: "PCOS/PCOD",
+        avoid: ["Refined sugar & sugary beverages", "Refined carbs (white bread, maida)", "Excess caffeine"],
+        include: ["Low glycemic index foods (whole grains, legumes)", "High-fiber vegetables", "Healthy fats and regular protein intake"],
+        note: "Favor low-glycemic, high-fiber meals and consistent meal timing to help manage insulin levels."
+    }
+};
+
 function generatePlan() {
     let age = parseFloat(document.getElementById("age").value);
     let height = parseFloat(document.getElementById("height").value);
     let weight = parseFloat(document.getElementById("weight").value);
+    let gender = document.getElementById("gender").value;
+    let activity = document.getElementById("activity").value;
+    let dietPref = document.getElementById("dietPref").value;
+    let disease = document.getElementById("disease").value;
+
     if (!age || !height || !weight || age <= 0 || height <= 0 || weight <= 0) {
         alert("Please fill all fields with valid positive numbers.");
         return;
     }
+
     let bmi = weight / ((height / 100) ** 2);
-    let category = "";
-    let plan = "";
-    if (bmi < 18.5) {
-        category = "Underweight";
-        plan = `
-            <ul>
-                <li>Breakfast: Milk, oats, banana, nuts</li>
-                <li>Lunch: Rice, dal, vegetables, paneer/chicken</li>
-                <li>Snacks: Peanut butter sandwich, fruits</li>
-                <li>Dinner: Roti, vegetables, protein source</li>
-            </ul>`;
-    } else if (bmi < 25) {
-        category = "Normal Weight";
-        plan = `
-            <ul>
-                <li>Breakfast: Eggs/sprouts, toast, fruit</li>
-                <li>Lunch: Roti, dal, vegetables, salad</li>
-                <li>Snacks: Nuts and fruits</li>
-                <li>Dinner: Light meal with vegetables and protein</li>
-            </ul>`;
+    let bmiCategory = getBmiCategory(bmi);
+    let ageGroup = getAgeGroup(age);
+    let baseMeals = dietPlans[ageGroup][bmiCategory];
+    let meals = baseMeals.map(m => applyDietPreference(m, dietPref));
+    let tip = generalTips[ageGroup];
+
+    // Rough activity-based calorie note (Mifflin-St Jeor, simplified)
+    let bmr;
+    if (gender === "male") {
+        bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+    } else if (gender === "female") {
+        bmr = 10 * weight + 6.25 * height - 5 * age - 161;
     } else {
-        category = "Overweight";
-        plan = `
-            <ul>
-                <li>Breakfast: Oats, fruits, green tea</li>
-                <li>Lunch: Salad, dal, vegetables, grilled protein</li>
-                <li>Snacks: Fruits, roasted chana</li>
-                <li>Dinner: Soup, vegetables, lean protein</li>
-            </ul>`;
+        bmr = 10 * weight + 6.25 * height - 5 * age - 78; // midpoint estimate
     }
+    const activityMultipliers = {
+        sedentary: 1.2,
+        light: 1.375,
+        moderate: 1.55,
+        active: 1.725
+    };
+    let estimatedCalories = Math.round(bmr * activityMultipliers[activity]);
+
+    let mealLabels = ["Breakfast", "Lunch", "Snacks", "Dinner"];
+    let planHtml = "<ul>" + meals.map((m, i) => `<li><strong>${mealLabels[i]}:</strong> ${m}</li>`).join("") + "</ul>";
+
+    let dietPrefLabel = dietPref === "veg" ? "Vegetarian" : "Non-Vegetarian";
+
+    let healthHtml = "";
+    let info = diseaseInfo[disease];
+    if (info) {
+        healthHtml = `
+        <div class="health-box">
+            <h4>Health Considerations: ${info.label}</h4>
+            <p style="font-size:13px;">${info.note}</p>
+            <div class="swap-cols">
+                <div>
+                    <strong style="font-size:13px;">Include more:</strong>
+                    <ul>${info.include.map(i => `<li>${i}</li>`).join("")}</ul>
+                </div>
+                <div>
+                    <strong style="font-size:13px;">Limit/avoid:</strong>
+                    <ul>${info.avoid.map(i => `<li>${i}</li>`).join("")}</ul>
+                </div>
+            </div>
+        </div>`;
+    }
+
     document.getElementById("result").innerHTML = `
         <h3>Result</h3>
-        <p><strong>BMI:</strong> ${bmi.toFixed(2)}</p>
-        <p><strong>Category:</strong> ${category}</p>
+        <p><strong>BMI:</strong> ${bmi.toFixed(2)} <span class="badge">${bmiCategory}</span></p>
+        <p><strong>Age Group:</strong> ${ageGroup}</p>
+        <p><strong>Diet Preference:</strong> ${dietPrefLabel}</p>
+        <p><strong>Estimated Daily Calorie Need:</strong> ~${estimatedCalories} kcal</p>
         <h4>Suggested Diet Plan</h4>
-        ${plan}
+        ${planHtml}
+        <p style="font-size:13px; color:#555; margin-top:10px;"><em>Tip: ${tip}</em></p>
+        ${healthHtml}
     `;
 }
 </script>
